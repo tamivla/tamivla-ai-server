@@ -1,0 +1,23 @@
+# Виртуальное окружение
+ai_server_venv/
+venv/
+
+# Модели AI (ОЧЕНЬ ВАЖНО - не коммитить!)
+storage/models/
+models_cache/
+
+# Логи
+storage/logs/
+*.log
+
+# Кеши Python
+__pycache__/
+*.pyc
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

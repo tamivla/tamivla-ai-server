@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tamivla AI Server - Model Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .nav {
+            background: #34495e;
+            padding: 0;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-tab {
+            padding: 15px 30px;
+            color: white;
+            text-decoration: none;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .nav-tab:hover, .nav-tab.active {
+            background: #2c3e50;
+            border-bottom-color: #3498db;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .model-card {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .model-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .model-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .model-type {
+            background: #3498db;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+        
+        .model-size {
+            font-size: 1.1em;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            background: #ecf0f1;
+            border-radius: 10px;
+            height: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #219a52;
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Tamivla AI Server</h1>
+            <div class="subtitle">Model Management Dashboard</div>
+        </div>
+        
+        <nav class="nav">
+            <ul class="nav-tabs">
+                <li class="nav-tab active" onclick="showTab('overview')">📊 Обзор</li>
+                <li class="nav-tab" onclick="showTab('models')">🤖 Модели</li>
+                <li class="nav-tab" onclick="showTab('download')">📥 Загрузка</li>
+                <li class="nav-tab" onclick="showTab('resources')">💻 Ресурсы</li>
+            </ul>
+        </nav>
+        
+        <div class="content">
+            <!-- Вкладка Обзор -->
+            <div id="overview" class="tab-content active">
+                <h2>Системный обзор</h2>
+                <div class="stats-grid" id="overview-stats">
+                    <div class="loading">Загрузка данных...</div>
+                </div>
+                
+                <h2>Быстрые действия</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="showTab('models')">Управление моделями</button>
+                    <button class="btn btn-primary" onclick="showTab('download')">Загрузить новую модель</button>
+                    <button class="btn btn-primary" onclick="loadResources()">Обновить статистику</button>
+                </div>
+            </div>
+            
+            <!-- Вкладка Модели -->
+            <div id="models" class="tab-content">
+                <h2>Управление моделями</h2>
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="search-models" placeholder="🔍 Поиск моделей..." style="padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div id="models-list">
+                    <div class="loading">Загрузка списка моделей...</div>
+                </div>
+            </div>
+            
+            <!-- Вкладка Загрузка -->
+            <div id="download" class="tab-content">
+                <h2>Загрузка новой модели</h2>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                    <input type="text" id="model-id" placeholder="Например: microsoft/DialoGPT-medium" style="padding: 10px; width: 70%; border: 1px solid #ddd; border-radius: 5px; margin-right: 10px;">
+                    <button class="btn btn-primary" onclick="downloadModel()">Загрузить</button>
+                    
+                    <div style="margin-top: 15px;">
+                        <label><input type="checkbox" id="quantize-checkbox"> Авто-квантование</label>
+                        <select id="quantization-bits" style="margin-left: 10px; padding: 5px;">
+                            <option value="4">4-bit</option>
+                            <option value="8" selected>8-bit</option>
+                            <option value="16">16-bit</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="download-status" style="margin-top: 20px;"></div>
+            </div>
+            
+            <!-- Вкладка Ресурсы -->
+            <div id="resources" class="tab-content">
+                <h2>Системные ресурсы</h2>
+                <div id="resources-info">
+                    <div class="loading">Загрузка информации о ресурсах...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Функции для переключения вкладок
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Убрать активный класс со всех кнопок
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Показать выбранную вкладку
+            document.getElementById(tabName).classList.add('active');
+            
+            // Добавить активный класс к кнопке
+            event.target.classList.add('active');
+            
+            // Загрузить данные для вкладки
+            if (tabName === 'overview') {
+                loadOverview();
+            } else if (tabName === 'models') {
+                loadModels();
+            } else if (tabName === 'resources') {
+                loadResources();
+            }
+        }
+        
+        // Загрузка данных для обзора
+        async function loadOverview() {
+            try {
+                const response = await fetch('/system/status');
+                const data = await response.json();
+                
+                const statsHtml = `
+                    <div class="stat-card">
+                        <h3>Загружено моделей</h3>
+                        <div class="stat-value">${data.model_stats.total_loaded}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Всего моделей в кеше</h3>
+                        <div class="stat-value">${await getTotalModels()}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Доступно RAM</h3>
+                        <div class="stat-value">${data.system_resources.memory ? data.system_resources.memory.available_gb.toFixed(1) + ' GB' : 'N/A'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Использование CPU</h3>
+                        <div class="stat-value">${data.system_resources.cpu ? data.system_resources.cpu.percent.toFixed(1) + '%' : 'N/A'}</div>
+                    </div>
+                `;
+                
+                document.getElementById('overview-stats').innerHTML = statsHtml;
+            } catch (error) {
+                document.getElementById('overview-stats').innerHTML = '<div class="error">Ошибка загрузки данных</div>';
+            }
+        }
+        
+        // Получение общего количества моделей
+        async function getTotalModels() {
+            try {
+                const response = await fetch('/models/discovery');
+                const data = await response.json();
+                return data.total_models || 0;
+            } catch (error) {
+                return 'N/A';
+            }
+        }
+        
+        // Загрузка списка моделей
+        async function loadModels() {
+            try {
+                const response = await fetch('/models/discovery');
+                const data = await response.json();
+                
+                if (data.models && data.models.length > 0) {
+                    let modelsHtml = '';
+                    
+                    data.models.forEach(model => {
+                        if (model.name.startsWith('models--')) {
+                            const displayName = model.name.replace('models--', '').replace(/--/g, '/');
+                            const sizeGB = (model.size_mb / 1024).toFixed(1);
+                            
+                            modelsHtml += `
+                                <div class="model-card">
+                                    <div class="model-header">
+                                        <div class="model-name">${displayName}</div>
+                                        <div class="model-type">${model.model_type || 'unknown'}</div>
+                                    </div>
+                                    <div class="model-size">📦 ${sizeGB} GB</div>
+                                    <div>🏗️ ${model.architecture || 'Неизвестно'}</div>
+                                    <div style="margin-top: 15px;">
+                                        <button class="btn btn-success" onclick="loadModel('${displayName}')">🔄 Загрузить</button>
+                                        <button class="btn btn-warning" onclick="unloadModel('${displayName}')">🗑️ Выгрузить</button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    document.getElementById('models-list').innerHTML = modelsHtml;
+                } else {
+                    document.getElementById('models-list').innerHTML = '<div class="loading">Модели не найдены</div>';
+                }
+            } catch (error) {
+                document.getElementById('models-list').innerHTML = '<div class="error">Ошибка загрузки списка моделей</div>';
+            }
+        }
+        
+        // Загрузка информации о ресурсах
+        async function loadResources() {
+            try {
+                const response = await fetch('/models/resources');
+                const data = await response.json();
+                
+                let resourcesHtml = '<div class="stats-grid">';
+                
+                if (data.cpu) {
+                    resourcesHtml += `
+                        <div class="stat-card">
+                            <h3>Процессор</h3>
+                            <div class="stat-value">${data.cpu.percent.toFixed(1)}%</div>
+                            <div>Ядер: ${data.cpu.cores}</div>
+                        </div>
+                    `;
+                }
+                
+                if (data.memory) {
+                    resourcesHtml += `
+                        <div class="stat-card">
+                            <h3>Память</h3>
+                            <div class="stat-value">${data.memory.used_percent.toFixed(1)}%</div>
+                            <div>Доступно: ${data.memory.available_gb.toFixed(1)} GB</div>
+                        </div>
+                    `;
+                }
+                
+                if (data.gpu && Object.keys(data.gpu).length > 0) {
+                    for (const [gpuId, gpuInfo] of Object.entries(data.gpu)) {
+                        const usedPercent = ((gpuInfo.memory_allocated_gb / gpuInfo.memory_total_gb) * 100).toFixed(1);
+                        resourcesHtml += `
+                            <div class="stat-card">
+                                <h3>${gpuInfo.name}</h3>
+                                <div class="stat-value">${usedPercent}%</div>
+                                <div>VRAM: ${gpuInfo.memory_allocated_gb.toFixed(1)}/${gpuInfo.memory_total_gb.toFixed(1)} GB</div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                resourcesHtml += '</div>';
+                document.getElementById('resources-info').innerHTML = resourcesHtml;
+            } catch (error) {
+                document.getElementById('resources-info').innerHTML = '<div class="error">Ошибка загрузки информации о ресурсах</div>';
+            }
+        }
+        
+        // Функции для работы с моделями
+        async function loadModel(modelName) {
+            try {
+                const response = await fetch('/models/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: modelName })
+                });
+                const result = await response.json();
+                alert(result.message || 'Модель загружена');
+                loadModels(); // Обновить список
+            } catch (error) {
+                alert('Ошибка загрузки модели');
+            }
+        }
+        
+        async function unloadModel(modelName) {
+            try {
+                const response = await fetch('/models/unload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: modelName })
+                });
+                const result = await response.json();
+                alert(result.message || 'Модель выгружена');
+                loadModels(); // Обновить список
+            } catch (error) {
+                alert('Ошибка выгрузки модели');
+            }
+        }
+        
+        async function downloadModel() {
+            const modelId = document.getElementById('model-id').value;
+            const quantize = document.getElementById('quantize-checkbox').checked;
+            const bits = document.getElementById('quantization-bits').value;
+            
+            if (!modelId) {
+                alert('Введите идентификатор модели');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/models/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_id: modelId,
+                        quantize: quantize,
+                        quantization_bits: parseInt(bits)
+                    })
+                });
+                const result = await response.json();
+                document.getElementById('download-status').innerHTML = `
+                    <div class="model-card">
+                        <h3>Статус загрузки</h3>
+                        <div>${result.message}</div>
+                        <div>ID: ${result.download_id}</div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('download-status').innerHTML = '<div class="error">Ошибка загрузки модели</div>';
+            }
+        }
+        
+        // Загрузить данные при открытии страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverview();
+        });
+    </script>
+</body>
+</html>

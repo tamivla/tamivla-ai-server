@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantization Management - Tamivla AI Server</title>
+    
+    <!-- Подключаем общие стили -->
+    <link rel="stylesheet" href="/static/css/common.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Quantization Manager</h1>
+            <div class="subtitle">Умное квантование моделей под ваше железо</div>
+        </div>
+        
+        <nav class="nav">
+            <ul class="nav-tabs">
+                <li class="nav-tab active" onclick="showTab('gpu-analysis')">🎮 Анализ GPU</li>
+                <li class="nav-tab" onclick="showTab('model-analysis')">🤖 Анализ моделей</li>
+                <li class="nav-tab" onclick="showTab('quantization-tools')">🔧 Инструменты</li>
+                <li class="nav-tab" onclick="showTab('quantized-models')">💾 Квантованные модели</li>
+            </ul>
+        </nav>
+        
+        <div class="content">
+            <!-- Вкладка Анализ GPU -->
+            <div id="gpu-analysis" class="tab-content active">
+                <h2>Детальный анализ GPU ресурсов</h2>
+                <div class="stats-grid" id="gpu-stats">
+                    <div class="loading">Загрузка информации о GPU...</div>
+                </div>
+                <div class="gpu-details" id="gpu-details"></div>
+            </div>
+            
+            <!-- Вкладка Анализ моделей -->
+            <div id="model-analysis" class="tab-content">
+                <h2>Анализ моделей и рекомендации по квантованию</h2>
+                
+                <div class="analysis-controls">
+                    <div class="input-group">
+                        <label for="model-select">Выберите модель для анализа:</label>
+                        <select id="model-select">
+                            <option value="">-- Выберите модель --</option>
+                            <option value="Qwen/Qwen2.5-7B-Instruct">Qwen 2.5 7B Instruct (14.5 GB)</option>
+                            <option value="sentence-transformers/paraphrase-multilingual-mpnet-base-v2">Multilingual MPNet Base v2 (2.1 GB)</option>
+                            <option value="intfloat/multilingual-e5-large-instruct">Multilingual E5 Large (2.2 GB)</option>
+                            <option value="microsoft/DialoGPT-medium">DialoGPT Medium (0.8 GB)</option>
+                            <option value="custom">Ввести свою модель...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group" id="custom-model-group" style="display: none;">
+                        <label for="custom-model">Имя модели (HuggingFace format):</label>
+                        <input type="text" id="custom-model" placeholder="например: author/model-name">
+                        <button class="btn btn-primary" onclick="analyzeCustomModel()">Проанализировать</button>
+                    </div>
+                </div>
+                
+                <div id="model-analysis-results">
+                    <div class="loading">Выберите модель для анализа</div>
+                </div>
+            </div>
+            
+            <!-- Вкладка Инструменты -->
+            <div id="quantization-tools" class="tab-content">
+                <h2>Инструменты квантования</h2>
+                
+                <div class="model-analysis-card">
+                    <h3>Пакетный анализ популярных моделей</h3>
+                    <p>Проанализируйте несколько популярных моделей одновременно:</p>
+                    <button class="btn btn-primary" onclick="analyzePopularModels()">Запустить пакетный анализ</button>
+                    
+                    <div id="batch-analysis-results" style="margin-top: 20px;"></div>
+                </div>
+                
+                <div class="model-analysis-card">
+                    <h3>Квантование модели</h3>
+                    <div class="input-group">
+                        <label for="quantize-model">Имя модели для квантования:</label>
+                        <input type="text" id="quantize-model" placeholder="author/model-name">
+                    </div>
+                    <div class="input-group">
+                        <label for="quantize-level">Уровень квантования:</label>
+                        <select id="quantize-level">
+                            <option value="8bit">8-bit (хорошее качество)</option>
+                            <option value="4bit">4-bit (баланс качества/размера)</option>
+                            <option value="fp16">FP16 (половинная точность)</option>
+                            <option value="q4">Q4 (агрессивное сжатие)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success" onclick="startQuantization()">🚀 Запустить квантование</button>
+                    
+                    <div id="quantization-status" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+            
+            <!-- Вкладка Квантованные модели -->
+            <div id="quantized-models" class="tab-content">
+                <h2>Уже квантованные модели</h2>
+                <div id="quantized-models-list">
+                    <div class="loading">Загрузка списка квантованных моделей...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем общие JS функции -->
+    <script src="/static/js/common.js"></script>
+    
+    <!-- Специфичные JS функции для квантования -->
+    <script src="/static/js/quantization.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Models List - Tamivla AI Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; text-align: center; margin-bottom: 20px; }
+        .model-card { background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #3498db; }
+        .model-name { font-size: 1.3em; font-weight: bold; color: #2c3e50; }
+        .model-info { color: #666; margin: 10px 0; }
+        .btn { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-load { background: #27ae60; color: white; }
+        .btn-unload { background: #e74c3c; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Управление моделями</h1>
+            <p>Список доступных AI моделей</p>
+        </div>
+        
+        <div id="models-list">
+            <p>Загрузка списка моделей...</p>
+        </div>
+    </div>
+
+    <script>
+        async function loadModels() {
+            try {
+                const response = await fetch('/models/discovery');
+                const data = await response.json();
+                
+                let html = '';
+                if (data.models && data.models.length > 0) {
+                    data.models.forEach(model => {
+                        if (model.name.startsWith('models--')) {
+                            const displayName = model.name.replace('models--', '').replace(/--/g, '/');
+                            const sizeGB = (model.size_mb / 1024).toFixed(1);
+                            html += `
+                                <div class="model-card">
+                                    <div class="model-name">${displayName}</div>
+                                    <div class="model-info">
+                                        <strong>Размер:</strong> ${sizeGB} GB | 
+                                        <strong>Тип:</strong> ${model.model_type || 'unknown'} |
+                                        <strong>Архитектура:</strong> ${model.architecture || 'Неизвестно'}
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-load" onclick="loadModel('${displayName}')">🔄 Загрузить</button>
+                                        <button class="btn btn-unload" onclick="unloadModel('${displayName}')">🗑️ Выгрузить</button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    html = '<p>Модели не найдены в кеше</p>';
+                }
+                document.getElementById('models-list').innerHTML = html;
+            } catch (error) {
+                document.getElementById('models-list').innerHTML = '<p style="color: red;">Ошибка загрузки списка моделей</p>';
+            }
+        }
+
+        async function loadModel(modelName) {
+            try {
+                const response = await fetch('/models/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: modelName })
+                });
+                const result = await response.json();
+                alert(result.message || 'Модель загружена');
+            } catch (error) {
+                alert('Ошибка загрузки модели: ' + error.message);
+            }
+        }
+
+        async function unloadModel(modelName) {
+            try {
+                const response = await fetch('/models/unload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: modelName })
+                });
+                const result = await response.json();
+                alert(result.message || 'Модель выгружена');
+            } catch (error) {
+                alert('Ошибка выгрузки модели: ' + error.message);
+            }
+        }
+
+        // Загрузить модели при открытии страницы
+        document.addEventListener('DOMContentLoaded', loadModels);
+    </script>
+</body>
+</html>

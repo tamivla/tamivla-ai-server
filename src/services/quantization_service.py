@@ -248,5 +248,72 @@ class QuantizationService:
         quantized_path = self.get_quantized_model_path(model_name, quantization_level)
         return quantized_path.exists()
 
+    def quantize_model(self, model_name: str, quantization_level: str) -> Dict[str, Any]:
+        """
+        Квантование модели с использованием transformers (обход проблемы bitsandbytes в Windows)
+        """
+        try:
+            logger.info(f"🔄 Запуск квантования {model_name} в {quantization_level}")
+            
+            from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+            import torch
+            
+            logger.info(f"📥 Импорт библиотек выполнен успешно")
+            
+            # Определяем конфигурацию квантования
+            if quantization_level == '4bit':
+                bnb_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.float16
+                )
+            elif quantization_level == '8bit':
+                bnb_config = BitsAndBytesConfig(load_in_8bit=True)
+            elif quantization_level == 'fp16':
+                bnb_config = None  # Будем использовать обычную загрузку с fp16
+            else:
+                return {'error': f'Unsupported quantization level: {quantization_level}'}
+            
+            logger.info(f"🔧 Конфигурация квантования создана: {quantization_level}")
+            
+            # Загружаем модель с квантованием
+            logger.info(f"📥 Загрузка модели {model_name}...")
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=bnb_config,
+                device_map="auto",
+                trust_remote_code=True,
+                torch_dtype=torch.float16 if quantization_level == 'fp16' else None
+            )
+            
+            logger.info(f"✅ Модель успешно загружена с квантованием")
+            
+            # Сохраняем квантованную модель
+            quantized_path = self.get_quantized_model_path(model_name, quantization_level)
+            logger.info(f"💾 Сохранение квантованной модели в {quantized_path}...")
+            model.save_pretrained(quantized_path)
+            
+            logger.info(f"🎉 Квантование завершено успешно")
+            
+            return {
+                'success': True,
+                'quantized_path': str(quantized_path),
+                'model_name': model_name,
+                'quantization_level': quantization_level,
+                'message': f'Модель успешно квантована в {quantization_level}'
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка квантования: {e}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+            return {
+                'success': False,
+                'error': str(e),
+                'model_name': model_name,
+                'quantization_level': quantization_level
+            }
+
 # Глобальный экземпляр сервиса
 quantization_service = QuantizationService()

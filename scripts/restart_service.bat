@@ -1,3 +1,4 @@
+REM \scripts\restart_service.bat
 @echo off
 echo ========================================
 echo    Tamivla AI Server - Restart

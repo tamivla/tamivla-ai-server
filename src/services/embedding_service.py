@@ -1,118 +1,93 @@
-"""
-Сервис эмбеддингов для Tamivla AI Server
-Векторизация текстов с использованием sentence-transformers
-"""
-
+# src/services/embedding_service.py
 from typing import List, Dict, Any, Optional
 import numpy as np
 from loguru import logger
-from .model_manager import model_manager
+from sentence_transformers import SentenceTransformer
+
+from services.model_manager import model_manager
+from services.batch_processor import batch_processor
 
 class EmbeddingService:
     """Сервис для работы с текстовыми эмбеддингами"""
     
     def __init__(self):
-        self.default_model = "sentence-transformers/all-MiniLM-L6-v2"
+        self.default_model = "models--intfloat--multilingual-e5-large-instruct"
         
     async def get_embeddings(self, texts: List[str], model_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Получение векторных представлений для списка текстов
-        
-        Args:
-            texts: Список текстов для векторизации
-            model_name: Имя модели (если None, используется модель по умолчанию)
-            
-        Returns:
-            Словарь с эмбеддингами и метаинформацией
         """
         try:
             if not texts:
                 return {
-                    "error": "Пустой список текстов",
-                    "embeddings": []
+                    "object": "list",
+                    "data": [],
+                    "model": model_name or self.default_model,
+                    "usage": {"prompt_tokens": 0, "total_tokens": 0}
                 }
                 
             model_to_use = model_name or self.default_model
             
-            # Проверяем загружена ли модель
-            if not model_manager.get_model_info(model_to_use):
-                logger.info(f"Модель {model_to_use} не загружена, пытаемся загрузить...")
-                if not model_manager.load_embedding_model(model_to_use):
+            # Загружаем модель если не загружена
+            if model_to_use not in model_manager.loaded_models:
+                logger.info(f"Loading model: {model_to_use}")
+                success = model_manager.load_model(model_to_use, "embedding")
+                if not success:
                     return {
-                        "error": f"Не удалось загрузить модель {model_to_use}",
-                        "embeddings": []
+                        "object": "list",
+                        "data": [],
+                        "model": model_to_use,
+                        "error": f"Failed to load model: {model_to_use}"
                     }
             
-            # Здесь будет реальная логика векторизации
-            # Пока возвращаем заглушки
-            embeddings = self._generate_dummy_embeddings(texts)
+            # Получаем модель
+            model = model_manager.loaded_models[model_to_use]['model']
+            
+            # 🔥 ИСПОЛЬЗУЕМ VOLUME-BASED БАТЧИНГ
+            logger.info(f"🔄 Начало volume-based батчинга для {len(texts)} текстов")
+            batches = batch_processor.form_batches(texts)
+            logger.info(f"📦 Сформировано батчей: {len(batches)}")
+            
+            all_embeddings = []
+            
+            for i, batch in enumerate(batches):
+                if batch:
+                    logger.info(f"🔨 Обработка батча {i+1}/{len(batches)} размером {len(batch)} текстов")
+                    batch_embeddings = model.encode(batch).tolist()
+                    all_embeddings.extend(batch_embeddings)
+            
+            logger.info(f"✅ Volume-based батчинг завершен")
+            
+            # 🔴 OPENAI-СОВМЕСТИМЫЙ ФОРМАТ ОТВЕТА
+            response_data = []
+            for i, embedding in enumerate(all_embeddings):
+                response_data.append({
+                    "object": "embedding",
+                    "embedding": embedding,
+                    "index": i
+                })
+            
+            total_tokens = sum(len(text) for text in texts)
             
             return {
+                "object": "list",
+                "data": response_data,
                 "model": model_to_use,
-                "embeddings": embeddings,
-                "dimensions": len(embeddings[0]) if embeddings else 0,
-                "count": len(embeddings),
-                "texts_processed": len(texts)
+                "usage": {
+                    "prompt_tokens": total_tokens,
+                    "total_tokens": total_tokens
+                },
+                "batches_used": len(batches)  # 🔥 НАШЕ КАСТОМНОЕ ПОЛЕ
             }
             
         except Exception as e:
-            logger.error(f"Ошибка получения эмбеддингов: {e}")
+            logger.error(f"Embedding error: {e}")
             return {
-                "error": f"Внутренняя ошибка сервера: {str(e)}",
-                "embeddings": []
+                "object": "list",
+                "data": [],
+                "model": model_name or self.default_model,
+                "error": f"Embedding error: {str(e)}"
             }
-    
-    def _generate_dummy_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """
-        Генерация заглушечных эмбеддингов для тестирования
-        В реальной реализации будет заменено на sentence-transformers
-        """
-        # Простая заглушка - случайные векторы фиксированной размерности
-        embedding_size = 384  # Размерность all-MiniLM-L6-v2
-        embeddings = []
-        
-        for text in texts:
-            # Генерируем псевдо-случайный вектор на основе текста
-            # для детерминированности в тестовом режиме
-            seed = hash(text) % 10000
-            np.random.seed(seed)
-            embedding = np.random.randn(embedding_size).tolist()
-            embeddings.append(embedding)
-            
-        return embeddings
-    
-    async def get_similarity(self, text1: str, text2: str, model_name: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Вычисление семантической схожести между двумя текстами
-        """
-        try:
-            # Получаем эмбеддинги для обоих текстов
-            result = await self.get_embeddings([text1, text2], model_name)
-            
-            if "error" in result:
-                return {"error": result["error"]}
-                
-            embeddings = result["embeddings"]
-            
-            if len(embeddings) != 2:
-                return {"error": "Не удалось получить эмбеддинги для сравнения"}
-            
-            # Вычисляем косинусное сходство
-            vec1 = np.array(embeddings[0])
-            vec2 = np.array(embeddings[1])
-            
-            similarity = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-            
-            return {
-                "similarity": float(similarity),
-                "text1": text1,
-                "text2": text2,
-                "model": result["model"]
-            }
-            
-        except Exception as e:
-            logger.error(f"Ошибка вычисления схожести: {e}")
-            return {"error": f"Ошибка вычисления схожести: {str(e)}"}
 
-# Глобальный экземпляр сервиса эмбеддингов
+# Глобальный экземпляр
 embedding_service = EmbeddingService()

@@ -199,11 +199,17 @@ async function startQuantization() {
                     ${result.message}
                 </div>
             `;
-        } else {
+        } else if (result.status === 'completed') {
             document.getElementById('quantization-status').innerHTML = `
                 <div class="success">
-                    ${result.message}<br>
+                    ✅ ${result.message}<br>
                     Путь: ${result.quantized_path}
+                </div>
+            `;
+        } else {
+            document.getElementById('quantization-status').innerHTML = `
+                <div class="info">
+                    ⏳ ${result.message}
                 </div>
             `;
         }
@@ -219,14 +225,23 @@ async function startQuantization() {
 // Быстрое квантование модели
 async function quantizeModel(modelName, quantLevel) {
     try {
+        showNotification(`Запуск квантования ${modelName}...`, 'info');
+        
         const result = await apiCall(`/quantization/model/${encodeURIComponent(modelName)}/quantize?quantization_level=${quantLevel}`, {
             method: 'POST'
         });
         
-        showNotification(result.message, 'success');
+        if (result.status === 'completed') {
+            showNotification(`✅ ${result.message}`, 'success');
+        } else if (result.status === 'already_exists') {
+            showNotification(`ℹ️ ${result.message}`, 'info');
+        } else {
+            showNotification(`⏳ ${result.message}`, 'info');
+        }
         
     } catch (error) {
-        showNotification('Ошибка квантования модели', 'error');
+        console.error('Quantization error:', error);
+        showNotification(`❌ Ошибка квантования: ${error.message}`, 'error');
     }
 }
 

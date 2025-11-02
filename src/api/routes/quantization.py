@@ -167,6 +167,7 @@ async def get_model_quantization_options(model_name: str):
 
 @router.post("/model/{model_name}/quantize")
 async def quantize_model(model_name: str, quantization_level: str = "8bit"):
+    original_model_name = model_name.replace('--', '/')
     """
     Запуск процесса квантования модели
     
@@ -185,17 +186,19 @@ async def quantize_model(model_name: str, quantization_level: str = "8bit"):
                 "quantization_level": quantization_level
             }
         
-        # Здесь будет реализация процесса квантования
-        # Пока возвращаем заглушку
-        
-        return {
-            "status": "queued",
-            "message": f"Модель {model_name} поставлена в очередь на квантование {quantization_level}",
-            "model_name": model_name,
-            "quantization_level": quantization_level,
-            "estimated_size_gb": quantization_service.get_model_size_estimation(model_name),
-            "quantized_path": str(quantization_service.get_quantized_model_path(model_name, quantization_level))
-        }
+        # Запускаем реальное квантование
+        quantization_result = quantization_service.quantize_model(model_name, quantization_level)
+
+        if quantization_result['success']:
+            return {
+                "status": "completed", 
+                "message": quantization_result['message'],
+                "model_name": model_name,
+                "quantization_level": quantization_level,
+                "quantized_path": quantization_result['quantized_path']
+            }
+        else:
+            raise HTTPException(status_code=500, detail=f"Ошибка квантования: {quantization_result['error']}")
         
     except Exception as e:
         logger.error(f"Ошибка квантования модели {model_name}: {e}")

@@ -1,3 +1,4 @@
+REM \scripts\install_nssm.bat
 @echo off
 chcp 65001 >nul
 echo ========================================

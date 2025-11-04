@@ -18,16 +18,47 @@ class ModelManager:
         self.loaded_models: Dict[str, Any] = {}
         self.models_cache = Path(os.environ.get('HF_HOME', 'storage/models'))
         
+    def _normalize_model_name(self, model_name: str) -> str:
+        """Нормализует имя модели к стандартному формату HF кеша"""
+        if model_name.startswith('models--'):
+            return model_name  # Уже нормализовано
+        elif '/' in model_name:
+            return f"models--{model_name.replace('/', '--')}"  # Нормализуем
+        else:
+            return model_name  # Оставляем как есть
+    
+    def preload_essential_models(self):
+        """Предзагрузка основных моделей при старте сервера"""
+        essential_models = {
+            "intfloat/multilingual-e5-large-instruct": "embedding"
+        }
+        
+        for model_name, model_type in essential_models.items():
+            if self._get_local_model_path(model_name):
+                if self.load_model(model_name, model_type):
+                    logger.info(f"✅ Предзагружена: {model_name}")
+                else:
+                    logger.warning(f"⚠️ Не удалось предзагрузить: {model_name}")
+            else:
+                logger.warning(f"⚠️ Модель {model_name} не найдена для предзагрузки")
+
+    def is_model_loaded(self, model_name: str) -> bool:
+        """Проверяет загружена ли модель (с нормализацией имени)"""
+        normalized_name = self._normalize_model_name(model_name)
+        return normalized_name in self.loaded_models
+        
     def load_model(self, model_name: str, model_type: str, **kwargs) -> bool:
         try:
-            if model_name in self.loaded_models:
-                logger.info(f"Модель {model_name} уже загружена")
+            # Нормализуем имя ДО проверки
+            normalized_name = self._normalize_model_name(model_name)
+            if normalized_name in self.loaded_models:
+                logger.info(f"Модель {normalized_name} уже загружена")
                 return True
                 
-            logger.info(f"Загрузка {model_type} модели: {model_name}")
+            logger.info(f"Загрузка {model_type} модели: {normalized_name}")
             
             # ЖЕСТКАЯ ПРОВЕРКА: модель ДОЛЖНА существовать локально
-            local_path = self._get_local_model_path(model_name)
+            local_path = self._get_local_model_path(model_name)  # ← Передаем оригинальное имя
             if not local_path:
                 logger.error(f"🚫 ЗАПРЕЩЕНО: Модель {model_name} не найдена в локальном кеше")
                 return False
@@ -36,7 +67,7 @@ class ModelManager:
             os.environ['TRANSFORMERS_OFFLINE'] = '1'
             os.environ['HF_DATASETS_OFFLINE'] = '1'
             
-            # ЗАГРУЖАЕМ ИСКЛЮЧИТЕЛЬНО ИЗ ЛОКАЛЬНОГО ПУТИ!
+            # ЗАГРУЖАЕМ ИСКЛЮЧИТЕЛЬНО ИЗ ЛОКАЛЬНОГО ПУТЯ!
             if model_type == 'embedding':
                 from sentence_transformers import SentenceTransformer
                 try:
@@ -61,7 +92,7 @@ class ModelManager:
             else:
                 raise ValueError(f"Неподдерживаемый тип модели: {model_type}")
             
-            self.loaded_models[model_name] = {
+            self.loaded_models[normalized_name] = {
                 'type': model_type,
                 'status': 'loaded',
                 'model': model,
@@ -69,55 +100,39 @@ class ModelManager:
                 'local_path': str(local_path)
             }
             
-            logger.success(f"Модель {model_name} успешно загружена из локального кеша")
+            logger.success(f"Модель {normalized_name} успешно загружена из локального кеша")
             return True
             
         except Exception as e:
             logger.error(f"Ошибка загрузки модели {model_name}: {e}")
             return False
     
-    def _convert_cache_name_to_model_name(self, cache_name: str) -> str:
-        """
-        Преобразует имя из кеша в имя для загрузки ИСКЛЮЧИТЕЛЬНО по стандарту HF
-        """
-        # ТОЛЬКО стандартный формат HF!
-        if cache_name.startswith('models--'):
-            return cache_name.replace('models--', '').replace('--', '/')
-        
-        # Если не стандартный формат - ОШИБКА!
-        raise ValueError(f"Модель {cache_name} в нестандартном формате HF")
-    
     def _get_local_model_path(self, model_name: str) -> Optional[Path]:
-        """Получаем локальный путь к модели по СТАНДАРТНОМУ ФОРМАТУ HF"""
+        """Получаем локальный путь к модели по HF стандарту"""
         
-        # ТОЛЬКО стандартный формат: models--author--model-name
-        if not model_name.startswith('models--'):
-            # Пробуем конвертировать красивое имя в стандартный формат
-            if '/' in model_name:
-                model_name = f"models--{model_name.replace('/', '--')}"
-            else:
-                logger.error(f"Модель {model_name} в нестандартном формате")
-                return None
+        # 🔴 ИСПРАВЛЕНИЕ: Всегда нормализуем имя для поиска в кеше
+        normalized_name = self._normalize_model_name(model_name)
         
-        путь = self.models_cache / model_name
+        путь = self.models_cache / normalized_name
         if путь.exists():
-            logger.info(f"Найден стандартный путь: {путь}")
+            logger.info(f"Найден путь: {путь}")
             return путь
         
-        logger.error(f"Модель {model_name} не найдена в стандартном формате")
+        logger.error(f"Модель {model_name} (нормализовано: {normalized_name}) не найдена в кеше")
         return None
     
     def unload_model(self, model_name: str) -> bool:
         """Выгрузка модели из памяти"""
         try:
-            if model_name not in self.loaded_models:
-                logger.warning(f"Модель {model_name} не найдена в загруженных")
+            normalized_name = self._normalize_model_name(model_name)
+            if normalized_name not in self.loaded_models:
+                logger.warning(f"Модель {normalized_name} не найдена в загруженных")
                 return False
                 
-            logger.info(f"Выгрузка модели: {model_name}")
+            logger.info(f"Выгрузка модели: {normalized_name}")
             
             # Освобождаем ресурсы
-            model_info = self.loaded_models.pop(model_name)
+            model_info = self.loaded_models.pop(normalized_name)
             if model_info.get('model'):
                 del model_info['model']
                 
@@ -126,7 +141,7 @@ class ModelManager:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            logger.success(f"Модель {model_name} успешно выгружена")
+            logger.success(f"Модель {normalized_name} успешно выгружена")
             return True
             
         except Exception as e:
@@ -135,13 +150,15 @@ class ModelManager:
     
     def get_model(self, model_name: str) -> Optional[Any]:
         """Получение загруженной модели"""
-        if model_name in self.loaded_models:
-            return self.loaded_models[model_name]['model']
+        normalized_name = self._normalize_model_name(model_name)
+        if normalized_name in self.loaded_models:
+            return self.loaded_models[normalized_name]['model']
         return None
     
     def get_model_info(self, model_name: str) -> Optional[Dict]:
         """Получение информации о модели"""
-        return self.loaded_models.get(model_name)
+        normalized_name = self._normalize_model_name(model_name)
+        return self.loaded_models.get(normalized_name)
     
     def list_loaded_models(self) -> Dict[str, str]:
         """Список загруженных моделей"""

@@ -1,6 +1,7 @@
 # src/services/batch_processor.py
 from typing import List, Tuple
 import torch
+import time
 from loguru import logger
 
 class VolumeBatchProcessor:
@@ -10,28 +11,88 @@ class VolumeBatchProcessor:
     """
     
     def __init__(self):
-        self.memory_per_char = self._calibrate_memory_usage()
-        logger.info(f"🔧 Memory per char: {self.memory_per_char:.2f} bytes")
+        self.memory_per_char = 0.3  # Временное значение
+        self.is_calibrated = False
+        logger.info("🔧 Batch processor инициализирован, калибровка отложена")
     
     def _calibrate_memory_usage(self) -> float:
         """
-        Калибровка: определяем сколько байт памяти занимает 1 символ текста
+        АВТОКАЛИБРОВКА: точное определение потребления памяти на символ
+        Вызывается при ПЕРВОМ использовании батчера
         """
-        # Эмпирическая константа для multilingual-e5-large-instruct
-        # На основе тестов: 1 символ ~ 0.3 байта в GPU памяти при батч обработке
-        return 0.3
+        try:
+            from services.model_manager import model_manager
+            
+            # Проверяем что модель загружена
+            model_name = "models--intfloat--multilingual-e5-large-instruct"
+            if model_name not in model_manager.loaded_models:
+                logger.warning("❌ Модель не загружена для калибровки, используем константу")
+                return 0.3  # Fallback
+            
+            model = model_manager.loaded_models[model_name]['model']
+            
+            # Тестовые тексты разной длины
+            test_texts = [
+                "A" * 100,    # Короткий текст
+                "A" * 500,    # Средний текст  
+                "A" * 1000,   # Длинный текст
+                "A" * 2000    # Очень длинный текст
+            ]
+            
+            # Замеряем память ДО обработки
+            torch.cuda.empty_cache()
+            initial_memory = torch.cuda.memory_allocated()
+            
+            # Обрабатываем тестовые тексты
+            start_time = time.time()
+            embeddings = model.encode(test_texts)
+            processing_time = time.time() - start_time
+            
+            # Замеряем память ПОСЛЕ обработки
+            final_memory = torch.cuda.memory_allocated()
+            memory_used = final_memory - initial_memory
+            
+            # Вычисляем общее количество символов
+            total_chars = sum(len(text) for text in test_texts)
+            
+            # Вычисляем память на символ
+            memory_per_char = memory_used / total_chars if total_chars > 0 else 0.3
+            
+            logger.info(f"🎯 Калибровка: {len(test_texts)} текстов, {total_chars} символов")
+            logger.info(f"🎯 Память: {memory_used/1024**2:.2f} MB, Время: {processing_time:.3f}s")
+            logger.info(f"🎯 Результат: {memory_per_char:.4f} байт/символ")
+            
+            # Очищаем память
+            del embeddings
+            torch.cuda.empty_cache()
+            
+            return max(0.1, min(1.0, memory_per_char))  # Ограничиваем разумные пределы
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка калибровки: {e}, используем константу 0.3")
+            return 0.3  # Fallback значение
+    
+    def _ensure_calibrated(self):
+        """Убеждаемся что калибровка выполнена"""
+        if not self.is_calibrated:
+            self.memory_per_char = self._calibrate_memory_usage()
+            self.is_calibrated = True
+            logger.info(f"🔧 Auto-calibrated memory per char: {self.memory_per_char:.4f} bytes")
     
     def estimate_text_volume(self, text: str) -> int:
         """
         Быстрая оценка объема памяти для текста
         Возвращает условные единицы объема
         """
-        return max(1, len(text))  # Минимум 1 чтобы избежать деления на 0
+        return max(1, len(text))
     
     def calculate_max_volume(self) -> int:
         """
         Вычисляет максимальный объем батча based на свободной памяти GPU
         """
+        # 🔴 ВЫПОЛНЯЕМ КАЛИБРОВКУ ПРИ ПЕРВОМ ИСПОЛЬЗОВАНИИ
+        self._ensure_calibrated()
+        
         if not torch.cuda.is_available():
             return 10000  # Fallback для CPU
             

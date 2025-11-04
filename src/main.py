@@ -14,7 +14,6 @@ from loguru import logger
 # Только необходимые сервисы
 from services.model_manager import model_manager
 from services.model_discovery import model_discovery
-from services.embedding_service import embedding_service
 
 # Эндпоинты
 from api.routes.embeddings import router as embeddings_router
@@ -54,22 +53,9 @@ async def lifespan(app: FastAPI):
     discovery_result = model_discovery.scan_models_cache()
     logger.info(f"📊 Найдено моделей в кеше: {discovery_result.get('total_models', 0)}")
     
-    # ПРЕДЗАГРУЗКА ОСНОВНОЙ ЭМБЕДИНГОВОЙ МОДЕЛИ
-    try:
-        embedding_model_name = "models--intfloat--multilingual-e5-large-instruct"
-        logger.info(f"🔄 Предзагрузка эмбединговой модели: {embedding_model_name}")
-        
-        # Используем существующий механизм загрузки через model_manager
-        success = model_manager.load_model(embedding_model_name, "embedding")
-        if success:
-            logger.info("✅ Эмбединговая модель успешно загружена при старте")
-        else:
-            logger.warning("⚠️ Не удалось предзагрузить эмбединговую модель")
-            logger.info("ℹ️ Сервер продолжит работу, модель загрузится при первом запросе")
-        
-    except Exception as e:
-        logger.warning(f"⚠️ Ошибка предзагрузки эмбединговой модели: {e}")
-        logger.info("ℹ️ Сервер продолжит работу, модель загрузится при первом запросе")
+    # 🔴 ПРЕДЗАГРУЗКА ОСНОВНЫХ МОДЕЛЕЙ через model_manager
+    logger.info("🔄 Предзагрузка основных моделей...")
+    model_manager.preload_essential_models()
     
     yield
     

@@ -11,7 +11,7 @@ class EmbeddingService:
     """Сервис для работы с текстовыми эмбеддингами"""
     
     def __init__(self):
-        self.default_model = "models--intfloat--multilingual-e5-large-instruct"
+        self.default_model = "intfloat/multilingual-e5-large-instruct"  # ← HF СТАНДАРТ
         
     async def get_embeddings(self, texts: List[str], model_name: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -28,8 +28,8 @@ class EmbeddingService:
                 
             model_to_use = model_name or self.default_model
             
-            # Загружаем модель если не загружена
-            if model_to_use not in model_manager.loaded_models:
+            # 🔴 ИСПРАВЛЕННАЯ ПРОВЕРКА: используем model_manager.is_model_loaded()
+            if not model_manager.is_model_loaded(model_to_use):
                 logger.info(f"Loading model: {model_to_use}")
                 success = model_manager.load_model(model_to_use, "embedding")
                 if not success:
@@ -41,22 +41,16 @@ class EmbeddingService:
                     }
             
             # Получаем модель
-            model = model_manager.loaded_models[model_to_use]['model']
+            model = model_manager.get_model(model_to_use)
             
             # 🔥 ИСПОЛЬЗУЕМ VOLUME-BASED БАТЧИНГ
-            logger.info(f"🔄 Начало volume-based батчинга для {len(texts)} текстов")
             batches = batch_processor.form_batches(texts)
-            logger.info(f"📦 Сформировано батчей: {len(batches)}")
-            
             all_embeddings = []
             
-            for i, batch in enumerate(batches):
+            for batch in batches:
                 if batch:
-                    logger.info(f"🔨 Обработка батча {i+1}/{len(batches)} размером {len(batch)} текстов")
                     batch_embeddings = model.encode(batch).tolist()
                     all_embeddings.extend(batch_embeddings)
-            
-            logger.info(f"✅ Volume-based батчинг завершен")
             
             # 🔴 OPENAI-СОВМЕСТИМЫЙ ФОРМАТ ОТВЕТА
             response_data = []

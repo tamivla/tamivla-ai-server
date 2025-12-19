@@ -65,49 +65,44 @@ requirements.txt              # Зависимости Python
 
 ### OpenAI-совместимые:
 
+```bash
 GET /v1/models - список моделей
-
 POST /v1/embeddings - эмбеддинги
-
 POST /v1/chat/completions - чат
+```
 
 ### Кастомные - управление моделями:
-
+```bash
 POST /v1/models/load - загрузка в память
-
 POST /v1/models/unload - выгрузка из памяти
-
 GET /v1/models/loaded - загруженные модели
-
 POST /v1/models/download - скачивание моделей ⭐ НОВЫЙ
-
+```
 ### Кастомные - управление кешем:
-
+```bash
 GET /v1/cache/info - детальная информация о кеше
-
 POST /v1/cache/analyze - анализ кеша на битые модели
-
 DELETE /v1/cache/{model} - удаление моделей из кеша
-
+```
 ### Системные:
 
+```bash
 GET / - информация о сервере
-
 GET /health - здоровье сервера
-
 GET /debug/routes - диагностика routes
+```
 
 ## 1. OpenAI-совместимые эндпоинты
 
 #### GET /v1/models - Получение списка доступных моделей
 
-```ba
+```bash
 curl http://localhost:8000/v1/models
 ```
 
 Ответ:
 
-```bash
+```json
 {
 	"object": "list",
 	"data": [

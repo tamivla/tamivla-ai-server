@@ -4,9 +4,7 @@
 **Бренд:** Tamivla Industrial Group
 
 **Дата создания документа:** 2024.09.15  
-**Дата обновления документа:** 2025.12.15 10:40
-
----
+**Дата обновления документа:** 2025.10.15 10:40
 
 ## Обзор проекта
 
@@ -72,18 +70,22 @@ POST /v1/chat/completions - чат
 ```
 
 ### Кастомные - управление моделями:
+
 ```bash
 POST /v1/models/load - загрузка в память
 POST /v1/models/unload - выгрузка из памяти
 GET /v1/models/loaded - загруженные модели
-POST /v1/models/download - скачивание моделей ⭐ НОВЫЙ
+POST /v1/models/download - скачивание моделей
 ```
+
 ### Кастомные - управление кешем:
+
 ```bash
 GET /v1/cache/info - детальная информация о кеше
 POST /v1/cache/analyze - анализ кеша на битые модели
 DELETE /v1/cache/{model} - удаление моделей из кеша
 ```
+
 ### Системные:
 
 ```bash
@@ -370,8 +372,11 @@ curl -X POST "http://localhost:8000/v1/models/download" \
 
 # Проверить что модель появилась
 curl http://localhost:8000/v1/models
-Работа с разными форматами имен:
-bash
+```
+
+#### Работа с разными форматами имен:
+
+```bash
 # Простое имя
 curl -X POST "http://localhost:8000/v1/models/load" \
   -d '{"model_name": "multilingual-e5-large-instruct", "model_type": "embedding"}'

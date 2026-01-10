@@ -1,82 +1,17 @@
-🚀 Tamivla AI Server - Полная спецификация
-📋 Оглавление
-Файловая структура
+# Паспорт проекта
 
-Структура эндпоинтов
+**Проект:** Tamivla AI Server  
+**Бренд:** Tamivla Industrial Group
 
-Обзор проекта
+**Дата создания документа:** 2024.09.15  
+**Дата обновления документа:** 2025.10.15 10:40
 
-Архитектура
+## Обзор проекта
 
-OpenAI-совместимые эндпоинты
-
-Кастомные эндпоинты
-
-Практическое использование
-
-Разработка и расширение
-
-📁 Файловая структура
-Основные файлы:
-text
-src/
-├── main.py                          # Точка входа FastAPI приложения
-├── path_fix.py                      # Фикс путей для Windows
-│
-├── api/
-│   └── routes/
-│       ├── embeddings.py            # OpenAI embeddings эндпоинты
-│       ├── chat.py                  # OpenAI chat эндпоинты
-│       └── models.py                # Кастомные эндпоинты управления
-│
-└── services/
-    ├── model_manager.py             # Менеджер жизненного цикла моделей
-    ├── model_discovery.py           # Сканирование и анализ кеша
-    ├── embedding_service.py         # Сервис эмбеддингов
-    └── llm_service.py               # Сервис языковых моделей
-Вспомогательные файлы:
-text
-storage/
-├── models/                          # Кеш моделей (автосоздается)
-└── logs/
-    └── server.log                   # Логи сервера
-
-requirements.txt                     # Зависимости Python
-🔌 Структура эндпоинтов
-OpenAI-совместимые:
-GET /v1/models - список моделей
-
-POST /v1/embeddings - эмбеддинги
-
-POST /v1/chat/completions - чат
-
-Кастомные - управление моделями:
-POST /v1/models/load - загрузка в память
-
-POST /v1/models/unload - выгрузка из памяти
-
-GET /v1/models/loaded - загруженные модели
-
-POST /v1/models/download - скачивание моделей ⭐ НОВЫЙ
-
-Кастомные - управление кешем:
-GET /v1/cache/info - детальная информация о кеше
-
-POST /v1/cache/analyze - анализ кеша на битые модели
-
-DELETE /v1/cache/{model} - удаление моделей из кеша
-
-Системные:
-GET / - информация о сервере
-
-GET /health - здоровье сервера
-
-GET /debug/routes - диагностика routes
-
-🎯 Обзор проекта
 Tamivla AI Server - это OpenAI-совместимый сервер для управления AI-моделями, работающий под Windows. Сервер предоставляет стандартные OpenAI эндпоинты плюс кастомные функции для управления моделями и кешем.
 
 Ключевые особенности:
+
 ✅ OpenAI-совместимый API
 
 ✅ Работает под Windows (в отличие от vLLM)
@@ -89,42 +24,114 @@ Tamivla AI Server - это OpenAI-совместимый сервер для у�
 
 ✅ Поддержка стандарта Hugging Face (формат models--author--name)
 
-🏗 Архитектура
-text
-API Request → FastAPI Route → Model Manager → Real AI Model → Response
-🔌 OpenAI-совместимые эндпоинты
-1. GET /v1/models
-Получение списка доступных моделей
+## Архитектура
 
-bash
+```
+API Request → FastAPI Route → Model Manager → Real AI Model → Response 
+```
+
+## Файловая структура
+
+Основные файлы:
+
+```text
+src/
+├── main.py                   # Точка входа FastAPI приложения
+├── path_fix.py               # Фикс путей для Windows
+│
+├── api/
+│   └── routes/
+│       ├── embeddings.py     # OpenAI embeddings эндпоинты
+│       ├── chat.py           # OpenAI chat эндпоинты
+│       └── models.py         # Кастомные эндпоинты управления
+│
+└── services/
+├── model_manager.py          # Менеджер жизненного цикла моделей
+├── model_discovery.py        # Сканирование и анализ кеша
+├── embedding_service.py      # Сервис эмбеддингов
+└── llm_service.py            # Сервис языковых моделей
+Вспомогательные файлы:
+text
+storage/
+├── models/                   # Кеш моделей (автосоздается)
+└── logs/
+└── server.log                # Логи сервера
+requirements.txt              # Зависимости Python
+```
+
+## Структура эндпоинтов
+
+### OpenAI-совместимые:
+
+```bash
+GET /v1/models - список моделей
+POST /v1/embeddings - эмбеддинги
+POST /v1/chat/completions - чат
+```
+
+### Кастомные - управление моделями:
+
+```bash
+POST /v1/models/load - загрузка в память
+POST /v1/models/unload - выгрузка из памяти
+GET /v1/models/loaded - загруженные модели
+POST /v1/models/download - скачивание моделей
+```
+
+### Кастомные - управление кешем:
+
+```bash
+GET /v1/cache/info - детальная информация о кеше
+POST /v1/cache/analyze - анализ кеша на битые модели
+DELETE /v1/cache/{model} - удаление моделей из кеша
+```
+
+### Системные:
+
+```bash
+GET / - информация о сервере
+GET /health - здоровье сервера
+GET /debug/routes - диагностика routes
+```
+
+## 1. OpenAI-совместимые эндпоинты
+
+#### GET /v1/models - Получение списка доступных моделей
+
+```bash
 curl http://localhost:8000/v1/models
+```
+
 Ответ:
 
-json
+```json
 {
-  "object": "list",
-  "data": [
-    {
-      "id": "multilingual-e5-large-instruct",
-      "object": "model", 
-      "created": 1700000000,
-      "owned_by": "tamivla"
-    }
-  ]
+	"object": "list",
+	"data": [
+		{
+			"id": "multilingual-e5-large-instruct",
+			"object": "model",
+			"created": 1700000000,
+			"owned_by": "tamivla"
+		}
+	]
 }
-2. POST /v1/embeddings
-Получение векторных представлений текста
+```
 
-bash
+#### POST /v1/embeddings - Получение векторных представлений текста
+
+```bash
 curl -X POST "http://localhost:8000/v1/embeddings" \
   -H "Content-Type: application/json" \
   -d '{
     "input": ["hello world", "привет мир"],
     "model": "multilingual-e5-large-instruct"
   }'
+```
+
 Ответ:
 
-json
+```json
 {
   "object": "list",
   "data": [
@@ -140,10 +147,11 @@ json
     "total_tokens": 2
   }
 }
-3. POST /v1/chat/completions
-Чат-комплишн (требует доработки для LLM моделей)
+```
 
-bash
+#### POST /v1/chat/completions - Чат-комплишн (требует доработки для LLM моделей)
+
+```bash
 curl -X POST "http://localhost:8000/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
@@ -152,41 +160,50 @@ curl -X POST "http://localhost:8000/v1/chat/completions" \
       {"role": "user", "content": "Hello"}
     ]
   }'
-🔧 Кастомные эндпоинты
-1. Управление моделями
-POST /v1/models/load
-Загрузка модели в память
+```
 
-bash
+## 2. Кастомные эндпоинты
+
+### 2.1. Управление моделями
+
+#### POST /v1/models/load - Загрузка модели в память
+
+```bash
 curl -X POST "http://localhost:8000/v1/models/load" \
   -H "Content-Type: application/json" \
   -d '{
     "model_name": "multilingual-e5-large-instruct",
     "model_type": "embedding"
   }'
+```
+
 Ответ:
 
-json
+```json
 {
   "status": "success",
   "message": "Model multilingual-e5-large-instruct loaded",
   "model_name": "multilingual-e5-large-instruct"
 }
-POST /v1/models/unload
-Выгрузка модели из памяти
+```
 
-bash
+#### POST /v1/models/unload - Выгрузка модели из памяти
+
+```bash
 curl -X POST "http://localhost:8000/v1/models/unload" \
   -H "Content-Type: application/json" \
   -d '{"model_name": "multilingual-e5-large-instruct"}'
-GET /v1/models/loaded
-Список загруженных моделей
+```
 
-bash
+#### GET /v1/models/loaded - Список загруженных моделей
+
+```bash
 curl http://localhost:8000/v1/models/loaded
+```
+
 Ответ:
 
-json
+```json
 {
   "loaded_models": {
     "multilingual-e5-large-instruct": "embedding"
@@ -200,22 +217,27 @@ json
     }
   }
 }
-POST /v1/models/download ⭐ НОВЫЙ
-Скачивание модели из HuggingFace Hub
+```
 
-bash
+#### POST /v1/models/download - Скачивание модели из HuggingFace Hub
+
+```bash
 curl -X POST "http://localhost:8000/v1/models/download" \
   -H "Content-Type: application/json" \
   -d '{"model_id": "sentence-transformers/all-MiniLM-L6-v2"}'
-2. Управление кешем
-GET /v1/cache/info
-Детальная информация о кеше
+```
 
-bash
+### 2.2. Управление кешем
+
+#### GET /v1/cache/info - Детальная информация о кеше
+
+```bash
 curl http://localhost:8000/v1/cache/info
+```
+
 Ответ (сокращенно):
 
-json
+```json
 {
   "cache_path": "storage\\models",
   "total_models": 3,
@@ -235,14 +257,17 @@ json
     }
   ]
 }
-POST /v1/cache/analyze
-Анализ кеша на наличие битых моделей
+```
 
-bash
+#### POST /v1/cache/analyze - Анализ кеша на наличие битых моделей
+
+```bash
 curl -X POST http://localhost:8000/v1/cache/analyze
+```
+
 Ответ:
 
-json
+```json
 {
   "total_models": 3,
   "broken_models": [],
@@ -252,59 +277,79 @@ json
     "multilingual-e5-large-instruct"
   ]
 }
-DELETE /v1/cache/{model_name}
-Удаление модели из кеша
+```
 
-bash
+#### DELETE /v1/cache/{model_name} - Удаление модели из кеша
+
+```bash
 curl -X DELETE "http://localhost:8000/v1/cache/all-mpnet-base-v2"
+```
+
 Ответ:
 
-json
+```json
 {
   "status": "success",
   "message": "Модель all-mpnet-base-v2 удалена из кеша",
   "model_name": "all-mpnet-base-v2"
 }
-3. Системные эндпоинты
-GET /
-Информация о сервере
+```
 
-bash
+## 3. Системные эндпоинты
+
+#### GET / - Информация о сервере
+
+```bash
 curl http://localhost:8000/
-GET /health
-Проверка здоровья сервера
+```
 
-bash
+#### GET /health - Проверка здоровья сервера
+
+```bash
 curl http://localhost:8000/health
-GET /debug/routes
-Диагностика зарегистрированных routes
+```
 
-bash
+#### GET /debug/routes - Диагностика зарегистрированных routes
+
+```bash
 curl http://localhost:8000/debug/routes
-🛠 Практическое использование
-Старт сервера:
-bash
+```
+
+## Практическое использование
+
+### Старт сервера:
+
+```bash
 python src/main.py
-Базовый workflow:
-Проверить доступные модели:
+```
 
-bash
+### Базовый workflow:
+
+#### Проверить доступные модели:
+
+```bash
 curl http://localhost:8000/v1/models
-Загрузить модель:
+```
 
-bash
+#### Загрузить модель:
+
+```bash
 curl -X POST "http://localhost:8000/v1/models/load" \
   -H "Content-Type: application/json" \
   -d '{"model_name": "multilingual-e5-large-instruct", "model_type": "embedding"}'
-Использовать модель:
+```
 
-bash
+#### Использовать модель:
+
+```bash
 curl -X POST "http://localhost:8000/v1/embeddings" \
   -H "Content-Type: application/json" \
   -d '{"input": ["your text"], "model": "multilingual-e5-large-instruct"}'
-Управлять кешем:
+```
 
-bash
+### Управлять кешем:
+
+```bash
 # Посмотреть детальную информацию
 curl http://localhost:8000/v1/cache/info
 
@@ -313,9 +358,13 @@ curl -X POST http://localhost:8000/v1/cache/analyze
 
 # Удалить ненужную модель
 curl -X DELETE "http://localhost:8000/v1/cache/unwanted-model"
-Расширенное использование:
-Скачивание новых моделей:
-bash
+```
+
+### Расширенное использование:
+
+#### Скачивание новых моделей: 
+
+```bash
 # Скачать модель из HuggingFace
 curl -X POST "http://localhost:8000/v1/models/download" \
   -H "Content-Type: application/json" \
@@ -323,8 +372,11 @@ curl -X POST "http://localhost:8000/v1/models/download" \
 
 # Проверить что модель появилась
 curl http://localhost:8000/v1/models
-Работа с разными форматами имен:
-bash
+```
+
+#### Работа с разными форматами имен:
+
+```bash
 # Простое имя
 curl -X POST "http://localhost:8000/v1/models/load" \
   -d '{"model_name": "multilingual-e5-large-instruct", "model_type": "embedding"}'
@@ -332,68 +384,72 @@ curl -X POST "http://localhost:8000/v1/models/load" \
 # Стандартное имя HuggingFace
 curl -X POST "http://localhost:8000/v1/models/load" \
   -d '{"model_name": "models--sentence-transformers--all-MiniLM-L6-v2", "model_type": "embedding"}'
-🔬 Разработка и расширение
-Добавление новой модели:
-Добавить специальный случай в model_manager.py:
+```
 
-python
+## Разработка и расширение
+
+### Добавление новой модели:
+
+#### Добавить специальный случай в model\_[manager.py]():
+
+```bash
 special_cases = {
     'multilingual-e5-large-instruct': 'intfloat/multilingual-e5-large-instruct',
     'new-model-name': 'author/new-model-name',
 }
-Проверить загрузку:
+```
 
-bash
+#### Проверить загрузку:
+
+```bash
 curl -X POST "http://localhost:8000/v1/models/load" \
   -H "Content-Type: application/json" \
   -d '{"model_name": "new-model-name", "model_type": "embedding"}'
-Мониторинг и логи:
+```
+
+### Мониторинг и логи: 
+
 Логи: storage/logs/server.log
 
 Метрики моделей: GET /v1/models/loaded
 
 Метрики кеша: GET /v1/cache/info
 
-🎯 Рекомендации по развитию
-Приоритетные задачи:
-Доработать LLM сервис - полноценная работа chat/completions
+## Рекомендации по развитию
 
-Реализовать эндпоинт скачивания моделей
+### Приоритетные задачи:
 
-Добавить батчинг для эмбеддингов
+- Доработать LLM сервис - полноценная работа chat/completions
+- Реализовать эндпоинт скачивания моделей
+- Добавить батчинг для эмбеддингов
+- Реализовать квоты и лимиты
+- Добавить аутентификацию
 
-Реализовать квоты и лимиты
+### Архитектурные улучшения:
 
-Добавить аутентификацию
+- Кеширование эмбеддингов
+- Фоновая загрузка моделей
+- Health checks для моделей
+- Метрики производительности
 
-Архитектурные улучшения:
-Кеширование эмбеддингов
+## 📊 Текущее состояние
 
-Фоновая загрузка моделей
-
-Health checks для моделей
-
-Метрики производительности
-
-📊 Текущее состояние
 ✅ Реализовано:
-OpenAI-совместимые эндпоинты
 
-Управление жизненным циклом моделей
+- OpenAI-совместимые эндпоинты
+- Управление жизненным циклом моделей
+- Сканирование и анализ кеша
+- Поддержка стандарта Hugging Face
+- Работа под Windows
 
-Сканирование и анализ кеша
+## Рабочие модели:
 
-Поддержка стандарта Hugging Face
+- Embedding: multilingual-e5-large-instruct (1024 размерность)
+- LLM: Qwen2.5-7B-Instruct-GPTQ-Int4 (квантованная)
+- LLM: models--Qwen--Qwen2.5-7B-Instruct (полная)
 
-Работа под Windows
+---
 
-🔧 Рабочие модели:
-Embedding: multilingual-e5-large-instruct (1024 размерность)
-
-LLM: Qwen2.5-7B-Instruct-GPTQ-Int4 (квантованная)
-
-LLM: models--Qwen--Qwen2.5-7B-Instruct (полная)
-
-🚀 Tamivla AI Server готов к использованию в продакшене!
+Tamivla AI Server готов к использованию в продакшене!
 
 Документация актуальна на 24.10.2025
